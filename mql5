@@ -1,0 +1,101 @@
+
+// Program: Advanced CCI by Ioannis Xenos
+// Developer: Forex Robot Easy Team
+// Site: forexroboteasy.com
+
+// Include necessary libraries and APIs
+#include <Trade\Trade.mqh>
+#include <Indicators\CCI.mqh>
+
+// Define global variables
+int maFilter = 14;          // Moving Average filter period
+double lotSize = 0.01;      // Default lot size
+double stopLoss = 50.0;     // Default stop loss level in pips
+double takeProfit = 100.0;  // Default take profit level in pips
+double maxDrawdown = 10.0;  // Maximum allowed drawdown in percentage
+CCI cci;                    // CCI indicator object
+CTrade trade;               // Trade object
+
+// Customizable Forex Trading Strategy
+void CustomizableStrategy()
+{
+    // Calculate CCI value
+    double cciValue = cci.iCCI(_Symbol, _Period, 20, PRICE_CLOSE, 0);
+
+    // Check if CCI value is above 100 (overbought)
+    if (cciValue > 100)
+    {
+        // Open a sell trade
+        trade.Sell(lotSize);
+        trade.SetStopLoss(stopLoss);
+        trade.SetTakeProfit(takeProfit);
+    }
+    // Check if CCI value is below -100 (oversold)
+    else if (cciValue < -100)
+    {
+        // Open a buy trade
+        trade.Buy(lotSize);
+        trade.SetStopLoss(stopLoss);
+        trade.SetTakeProfit(takeProfit);
+    }
+}
+
+// Account Protection and Safe Trading
+void AccountProtection()
+{
+    // Calculate maximum drawdown
+    double accountBalance = AccountBalance();
+    double accountEquity = AccountEquity();
+    double drawdownPercentage = ((accountEquity - accountBalance) / accountBalance) * 100;
+
+    // Check if drawdown exceeds maximum allowed drawdown
+    if (drawdownPercentage > maxDrawdown)
+    {
+        // Close all open trades
+        trade.CloseAll();
+        
+        // Print a warning message
+        Print('Maximum drawdown exceeded. Closing all trades.');
+    }
+}
+
+// OnTick event handler
+void OnTick()
+{
+    // Check if trading allowed
+    if (!trade.IsTradeContextBusy())
+    {
+        // Call the CustomizableStrategy function
+        CustomizableStrategy();
+
+        // Call the AccountProtection function
+        AccountProtection();
+    }
+}
+
+// OnInit event handler
+void OnInit()
+{
+    // Initialize CCI indicator
+    cci.Create();
+
+    // Set the moving average filter period
+    cci.SetCCIParameters(maFilter);
+}
+
+// OnDeinit event handler
+void OnDeinit(const int reason)
+{
+    // Clean up and destroy CCI indicator
+    cci.Destroy();
+}
+
+// Program entry point
+void OnStart()
+{
+    // Register event handlers
+    EventSetTimer(1);    // OnTick event every second
+    EventSetTimer(600);  // AccountProtection event every 10 minutes
+    EventSetTimer(86400, 1);  // OnDeinit event every day
+}
+
